@@ -19,7 +19,9 @@ HF_API_KEY = os.getenv("HF_API_KEY")
 
 def setup_mistral():
     try:
-        llm = ChatMistralAI(model="mistral-medium")
+        llm = ChatMistralAI(
+            model="mistral-medium", mistral_api_key=MISTRAL_API_KEY, temperature=0
+        )
         return llm
     except Exception as e:
         print(f"Error setting up Mistral client: {str(e)}")
@@ -28,7 +30,7 @@ def setup_mistral():
 
 def setup_hf():
     try:
-        qa_llm = llm = HuggingFaceEndpoint(
+        qa_llm = HuggingFaceEndpoint(
             model="mistralai/Mistral-7B-Instruct-v0.3",
             max_new_tokens=512,
             top_k=10,
@@ -40,7 +42,8 @@ def setup_hf():
         )
         return qa_llm
     except Exception as e:
-        return f"Error setting up HF llm:{str(e)} \n"
+        print(f"Error setting up HF llm:{str(e)} \n")
+        return None
 
 
 def setup_kg():
@@ -57,74 +60,36 @@ def setup_kg():
         return None
 
 
-def process_prompt(prompt: str) -> str:
+def process_prompt(user_query: str) -> str:
     cypher_llm = setup_mistral()
-    if not cypher_llm:
-        return "Error: Could not initialize the chatbot"
-
     qa_llm = setup_hf()
-    if not qa_llm:
-        return "Error: Could not initialize chatbot"
-
     kg = setup_kg()
-    if not kg:
-        return "Error: Could not retrieve information"
+
+    if not cypher_llm or not qa_llm or not kg:
+        return "Error: Could not initialize required components."
 
     kg.refresh_schema()
     schema = kg.schema
 
-    CYPHER_GENERATION_PROMPT = setup_cypher_prompt()
-
     chain = GraphCypherQAChain.from_llm(
-        cypher_llm,
+        cypher_llm=cypher_llm,
         qa_llm=qa_llm,
         graph=kg,
         verbose=True,
         allow_dangerous_requests=True,
-        cypher_prompt=CYPHER_GENERATION_PROMPT,
+        validate_cypher=True,
     )
 
     try:
-        answer = chain.run(prompt)
-        return answer
+        answer = chain.invoke({"query": user_query})
+        if not answer:
+            return "No relevant data found."
+        return answer.get("result", "No result found.")
     except Exception as e:
-        print(f"Error during chain execution: {str(e)}")
-        return "An error occurred while processing the prompt."
-
-
-def setup_cypher_prompt():
-    CYPHER_GENERATION_TEMPLATE = """Task:Generate Cypher statement to query a graph database.
-    You are an AI assistant that generates Cypher queries for a Neo4j knowledge graph.
-    The database schema consists of the following nodes and relationships:
-
-     Schema:
-     {schema}
-     Given a user query, generate a valid and optimized Cypher query that strictly follows this schema.
-
-     **Rules:**
-
-     - Ensure the query is efficient and only returns necessary fields.
-     - If no direct match is possible, return the `summary` property of `Paper`.
-     - The output must contain only the Cypher query—no explanations or extra text.
-     - If the question cant be converted to a valid query reply with "Invalid", without any explanations.
-
-    Examples: Here are a few examples of generated Cypher statements for particular questions:
-    # How many papers does the paper "Attention is All you Need" cites 
-    MATCH (m:Paper {{name:"Attention is All you Need"}})<-[:CITES]-()
-    RETURN count(*) AS citationCount
-
-    The question is:
-    {question}"""
-
-    CYPHER_GENERATION_PROMPT = PromptTemplate(
-        input_variables=["schema", "question"], template=CYPHER_GENERATION_TEMPLATE
-    )
-
-    return CYPHER_GENERATION_PROMPT
+        print(f"Error during query execution: {str(e)}")
+        return "An error occurred while processing the request."
 
 
 if __name__ == "__main__":
-    result = process_prompt("Which paper has the most citations")
-    print(result)
-    # llm = setup_hf()
-    # print(llm.invoke("What is Deep Learning?"))
+    result = process_prompt("What is Deep Learning?")
+    print(f" Final result: {result}")
