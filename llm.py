@@ -7,14 +7,15 @@ from langchain_mistralai.chat_models import ChatMistralAI
 from langchain_huggingface.llms.huggingface_endpoint import HuggingFaceEndpoint
 from neo4j.exceptions import ServiceUnavailable
 from langchain_core.prompts.prompt import PromptTemplate
+import streamlit as st
 
 load_dotenv()
 
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
-HF_API_KEY = os.getenv("HF_API_KEY")
+NEO4J_USERNAME = st.secrets["NEO4J_USERNAME"]
+NEO4J_URI = st.secrets["NEO4J_URI"]
+NEO4J_PASSWORD = st.secrets["NEO4J_PASSWORD"]
+MISTRAL_API_KEY = st.secrets["MISTRAL_API_KEY"]
+HF_API_KEY = st.secrets["HF_API_KEY"]
 
 
 def setup_mistral():
