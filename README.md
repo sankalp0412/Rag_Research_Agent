@@ -45,6 +45,8 @@ The system follows an integrated pipeline for processing research papers and ans
 
 This entire process is seamlessly managed by **Dify.AI**, ensuring smooth workflow and efficient conversation handling.
 
+[Checkout the project :rocket:](https://sankalp0412-rag-research-agent-main-rkebki.streamlit.app/)
+
 ## DIFY Worfflow:
 
 ![image](https://github.com/user-attachments/assets/d631a070-9f03-45c0-b329-aa4b33f1a2f6)
